@@ -29,24 +29,27 @@ CORS(app)
 
 b = 4
 def predict(x, a, mu):
-    return 1/(1+((a*(x-mu)).pow(b)).sum(1))
-
+    return 1 / (1 + ((a * (x - mu)).pow(b)).sum(1))
 
 
 def predicate(x0, subset):
     '''subset boolean array of selection'''
-
-    ## prepare training data
+    # prepare training data
+    vmin = x0.min(0)
+    vmax = x0.max(0)
     x = torch.from_numpy(x0.astype(np.float32))
     x_mean = x.mean(0)
-    x_std = x.std(0)+1
-    x = (x-x_mean)/(x_std)
+    x_std = x.std(0) + 0.1
+    x = (x - x_mean) / (x_std)
     label = torch.from_numpy(subset).float()
 
     bce = nn.BCELoss()
     a = torch.randn(x.shape[1]).requires_grad_(True)
     mu = torch.randn(x.shape[1]).requires_grad_(True)
-    optimizer = optim.SGD([mu, a,], lr=1e-2, momentum=0.9, weight_decay=0.01)
+    optimizer = optim.SGD([
+        {'params': mu, 'weight_decay': 0},
+        {'params': a, 'weight_decay': 0.01}
+    ], lr=1e-2, momentum=0.9)
     for e in range(3000):
         pred = predict(x, a, mu)
         l = bce(pred, label)
@@ -61,19 +64,19 @@ def predicate(x0, subset):
 #     plt.stem(a.abs().numpy())
 #     plt.show()
 
-    r = 1/a.abs()
+    r = 1 / a.abs()
     print(
         'accuracy',
-        ((pred>0.5).float() == label).float().sum().item(),
-    '/', subset.shape[0])
+        ((pred > 0.5).float() == label).float().sum().item(),
+        '/', subset.shape[0])
 
     predicates = []
     for k in range(mu.shape[0]):
+        r_k = (r[k] * x_std[k]).item()
+        mu_k = (mu[k] * x_std[k] + x_mean[k]).item()
+        ci = ((mu_k - r_k), (mu_k + r_k))
         # if r[k] < 1.0 * (x[:,k].max()-x[:,k].min()):
-        if True:
-            r_k = (r[k] * x_std[k]).item()
-            mu_k = (mu[k] * x_std[k] + x_mean[k]).item()
-            ci = ((mu_k-r_k), (mu_k+r_k))
+        if not (ci[0] < vmin[k] and ci[1] > vmax[k]):
             predicates.append(dict(
                 dim=k, interval=ci
             ))
@@ -81,7 +84,8 @@ def predicate(x0, subset):
         predicates=predicates
     )
 
-embedding=None
+
+embedding = None
 @app.route('/get_embedding', methods=['GET'])
 def get_embedding():
     return {
@@ -90,12 +94,10 @@ def get_embedding():
     }
 
 
-
-df = pd.read_csv('./dataset/gait.csv')
+df = pd.read_csv('./dataset/gait_joined.csv')
 x0 = df.to_numpy()
-n_points = 10*101*6
-df = df[:n_points]
-x0 = x0[:n_points]
+
+
 @app.route('/compute_predicates', methods=['POST'])
 def compute_predicates():
     subset = np.array(request.json['subset'])
