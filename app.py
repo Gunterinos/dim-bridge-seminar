@@ -36,7 +36,7 @@ def predict(x, a, mu):
 # plt.plot(x, predict(x, a))
 
 
-def compute_predicate(x0, selected, n_iter=300):
+def compute_predicate(x0, selected, n_iter=1000):
     '''
         x0 - numpy array, shape=[n_points, n_feature]. Data points
         selected - boolean array. shape=[n_points] of selection
@@ -71,13 +71,13 @@ def compute_predicate(x0, selected, n_iter=300):
     # training loop
     for e in range(n_iter):
         pred = predict(x, a, mu)
-        print(pred.min().item(), pred.max().item())
         loss = bce(pred, label)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         if e % (n_iter//5) == 0:
-            print('loss', loss.item())
+            # print(pred.min().item(), pred.max().item())
+            print(f'[{e:>4}] loss {loss.item()}')
     a.detach_()
     mu.detach_()
     # plt.stem(a.abs().numpy()); plt.show()
