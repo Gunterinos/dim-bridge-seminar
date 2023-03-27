@@ -36,13 +36,17 @@ def predict(x, a, mu):
 # plt.plot(x, predict(x, a))
 
 
-def compute_predicate(x0, selected, n_iter=1000):
+def compute_predicate(x0, selected, n_iter=1000, mu_init=None, a_init=0.4):
     '''
         x0 - numpy array, shape=[n_points, n_feature]. Data points
         selected - boolean array. shape=[n_points] of selection
     '''
 
     # prepare training data
+    # orginal data extent
+    n_points, n_features = x0.shape
+    vmin = x0.min(0)
+    vmax = x0.max(0)
     x = torch.from_numpy(x0.astype(np.float32))
     label = torch.from_numpy(selected).float()
     # normalize
@@ -54,14 +58,21 @@ def compute_predicate(x0, selected, n_iter=1000):
     # since data is normalized,
     # mu can initialized around mean_pos examples
     # a can initialized around a constant across all axes
-    mu_init = x[selected].mean(0)
-    a_init = 0.4
-    a = (a_init + 0.1*(2*torch.rand(x.shape[1])-1))
+    center_selected = x[selected].mean(0)
+    if mu_init is None:
+        mu_init = center_selected
+    a = (a_init + 0.1*(2*torch.rand(n_features)-1))
     mu = mu_init + 0.1 * (2*torch.rand(x.shape[1]) - 1)
     a.requires_grad_(True)
     mu.requires_grad_(True)
 
-    bce = nn.BCELoss()
+    # weight-balance selected vs. unselected based on their size
+    n_selected = selected.sum()
+    n_unselected = n_points - n_selected
+    instance_weight = torch.ones(x.shape[0])
+    instance_weight[selected] = n_points/n_selected
+    instance_weight[~selected] = n_points/n_unselected
+    bce = nn.BCELoss(weight=instance_weight)
     optimizer = optim.SGD([
         {'params': mu, 'weight_decay': 0},
         # smaller a encourages larger reach of the bounding box
@@ -72,6 +83,7 @@ def compute_predicate(x0, selected, n_iter=1000):
     for e in range(n_iter):
         pred = predict(x, a, mu)
         loss = bce(pred, label)
+        loss += (mu - center_selected).pow(2).mean() * 20
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -82,14 +94,23 @@ def compute_predicate(x0, selected, n_iter=1000):
     mu.detach_()
     # plt.stem(a.abs().numpy()); plt.show()
 
-    print(
-        'accuracy',
-        ((pred > 0.5).float() == label).float().sum().item(),
-        '/', selected.shape[0])
-
-    # orginal data extent
-    vmin = x0.min(0)
-    vmax = x0.max(0)
+    pred = (pred > 0.5).float()
+    correct = (pred == label).float().sum().item()
+    total = selected.shape[0]
+    accuracy = correct/total
+    # 1 meaning points are selected
+    tp = ((pred == 1).float() * (label == 1).float()).sum().item()
+    fp = ((pred == 1).float() * (label == 0).float()).sum().item()
+    fn = ((pred == 0).float() * (label == 1).float()).sum().item()
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
+    f1 = 1/(1/precision + 1/recall)
+    print(f'''
+accuracy = {correct/total}
+precision = {precision}
+recall = {recall}
+f1 = {f1}
+    ''')
 
     # predicate clause selection
     # r is the range of the bounding box on each dimension
@@ -100,30 +121,23 @@ def compute_predicate(x0, selected, n_iter=1000):
         # denormalize
         r_k = (r[k] * scale[k]).item()
         mu_k = (mu[k] * scale[k] + mean[k]).item()
-        ci = ((mu_k - r_k), (mu_k + r_k))
+        ci = [mu_k - r_k, mu_k + r_k]
+        assert ci[0] < ci[1], 'ci[0] is not less than ci[1]'
+        if ci[0] < vmin[k]:
+            ci[0] = vmin[k]
+        if ci[1] > vmax[k]:
+            ci[1] = vmax[k]
         # feature selection based on extent range
 #         should_include = r[k] < 1.0 * (x[:,k].max()-x[:,k].min())
-        should_include = not (ci[0] < vmin[k] and ci[1] > vmax[k])
+        should_include = not (ci[0] <= vmin[k] and ci[1] >= vmax[k])
         if should_include:
             predicates.append(dict(
-                dim=k, interval=[max(ci[0], vmin[k]), min(ci[1], vmax[k])]
+                dim=k, interval=ci
             ))
-    return predicates
+    for p in predicates:
+        print(p)
+    return predicates, mu, a, accuracy, precision, recall, f1
 
-
-embedding = None
-
-
-@app.route('/get_embedding', methods=['GET'])
-def get_embedding():
-    return {
-        'shape': embedding.shape,
-        'value': b64encode(embedding.astype(np.float32).tobytes()).decode()
-    }
-
-
-# df = pd.read_csv('./dataset/gait_joined.csv')
-# x0 = df.to_numpy()
 
 current_dataset = None
 x0 = None
@@ -133,20 +147,50 @@ x0 = None
 def get_predicate():
     global current_dataset, x0
     dataset = request.json['dataset']
+    # load dataset csv
     if current_dataset != dataset:
         df = pd.read_csv(f'./dataset/{dataset}.csv')
-        # TODO drop x,y and filename
-        df = df.drop(['x', 'y', 'image_filename'], axis='columns')
+        for attr in ['x', 'y', 'image_filename']:
+            if attr in df.columns:
+                df = df.drop(attr, axis='columns')
         x0 = df.to_numpy()
         current_dataset = dataset
+
+    # a sequence of bool arrays indexed by [brush time, data point index]
     subsets = np.array(request.json['subsets'])
+
     predicates = []
+    quality_measures = []
+    mu = None
+    a = 0.4
     for subset in subsets:
-        predicate = compute_predicate(x0, subset)
+        predicate, mu, a, accuracy, precision, recall, f1 = compute_predicate(
+            x0, subset, mu_init=mu, a_init=a)
         predicates.append(predicate)
+        quality_measures.append(dict(
+            accuracy=accuracy,
+            precision=precision,
+            recall=recall,
+            f1=f1,
+        ))
+    # TODO compute and report precision recall accuracy and  F1
     return dict(
-        predicates=predicates
+        predicates=predicates,
+        quality_measures=quality_measures,
     )
+
+
+# embedding = None
+# @app.route('/get_embedding', methods=['GET'])
+# def get_embedding():
+#     return {
+#         'shape': embedding.shape,
+#         'value': b64encode(embedding.astype(np.float32).tobytes()).decode()
+#     }
+
+
+# df = pd.read_csv('./dataset/gait_joined.csv')
+# x0 = df.to_numpy()
 
 
 if __name__ == '__main__':
