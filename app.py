@@ -167,14 +167,15 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device='cuda'):
     if mu_init is None:
         mu_init = selection_centroids
     a = (a_init + 0.1*(2*torch.rand(n_brushes, n_features)-1)).to(device)
-    mu = (mu_init + 0.1 * (2*torch.rand(n_brushes, x.shape[1], device=device) - 1))
+    mu = (mu_init + 0.1 *
+          (2*torch.rand(n_brushes, x.shape[1], device=device) - 1))
     a.requires_grad_(True)
     mu.requires_grad_(True)
 
     # weight-balance selected vs. unselected based on their size
     bce_per_brush = []
     for st in selected:  # for each brush, define their class-balanced loss function
-        n_selected = st.sum() ## st is numpy array
+        n_selected = st.sum()  # st is numpy array
         n_unselected = n_points - n_selected
         instance_weight = torch.ones(x.shape[0]).to(device)
         instance_weight[st] = n_points/n_selected
@@ -200,7 +201,7 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device='cuda'):
         smoothness_loss += 100 * (mu[1:]-mu[:-1]).pow(2).mean()
         # print('bce', loss_per_brush)
         # print('smoothness', smoothness_loss.item())
-        sparsity_loss = 0 #a.abs().mean() * 100
+        sparsity_loss = 0  # a.abs().mean() * 100
         total_loss = sum(loss_per_brush) + smoothness_loss + sparsity_loss
         optimizer.zero_grad()
         total_loss.backward()
@@ -250,8 +251,8 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device='cuda'):
         r = 1 / a[t].abs()
         predicate_clauses = []
         for k in range(n_features):  # for each attribute
-            vmin_selected = x0[st,k].min()
-            vmax_selected = x0[st,k].max()
+            vmin_selected = x0[st, k].min()
+            vmax_selected = x0[st, k].max()
             # denormalize
             r_k = (r[k] * scale[k]).item()
             mu_k = (mu[t, k] * scale[k] + mean[k]).item()
@@ -289,11 +290,11 @@ def get_predicate():
     # load dataset csv
     if current_dataset != dataset:
         df = pd.read_csv(f'./dataset/{dataset}.csv')
-        for attr in ['x', 'y', 'image_filename','replication']:
+        for attr in ['x', 'y', 'image_filename', 'replication']:
             if attr in df.columns:
                 df = df.drop(attr, axis='columns')
         if dataset == 'gait1':
-            df = df[::6,:]
+            df = df[::6, :]
         x0 = df.to_numpy()
         current_dataset = dataset
     # a sequence of bool arrays indexed by [brush time, data point index]
@@ -338,7 +339,6 @@ def get_predicate():
 
 # df = pd.read_csv('./dataset/gait_joined.csv')
 # x0 = df.to_numpy()
-
 
 if __name__ == '__main__':
 
