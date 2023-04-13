@@ -3,8 +3,7 @@
 1. Clone this repo:
 ```git clone git@github.com:tiga1231/dim-bridge.git```
 
-1. 
-```cd dim-bridge```
+1. ```cd dim-bridge```
 
 1. Download dataset from Box as a zip file to the root of this repo:
 https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0
