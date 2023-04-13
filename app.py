@@ -16,6 +16,7 @@ from base64 import b64encode
 # create Flask app
 app = Flask(__name__)
 CORS(app)
+device = 'cpu'
 
 
 def predict(x, a, mu):
@@ -135,7 +136,7 @@ def predict(x, a, mu):
     # return predicates, mu, a, [accuracy, precision, recall, f1]
 
 
-def compute_predicate_sequence(x0, selected, n_iter=1000, device='cuda'):
+def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
     '''
         x0 - numpy array, shape=[n_points, n_feature]. Data points
         selected - boolean array. shape=[brush_index, n_points] of selection
