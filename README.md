@@ -21,5 +21,6 @@ A new dataset/ directory will show up
 https://observablehq.com/d/bc84ced61d90006e
 
 1. If this predicate server is not localhost...
-    1. If the remote server machine does not have a public ip but you have ssh access, you can forward port 9001 to your local machine which you run obserable notebook on:
+    1. If the remote server machine does not have a public ip but you have ssh access, you can forward port 9001 of the remote server to the same port on the local machine that you run obserable notebook on:
+```ssh -L 9001:localhost:9001 <username>@<your-machine-domain-or-ip>```
 
