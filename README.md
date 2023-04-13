@@ -6,15 +6,14 @@
 1. Download dataset from Box as a zip file to the root of this repo:
 https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0
 
-1. unzip
+1. Unzip: 
 ```unzip dimbridge-dataset.zip```
 A new dataset/ directory will show up
 
-1. install python dependencies
-```pip install requirements.txt```
-[TODO requirements.txt]
+1. Use your favorite virtualenv, install python dependencies:
+```pip install -r requirements.txt```
 
-1. Start the server on port 9001
+1. Start the server on port 9001: 
 ```python app.py```
 
 1. Open the DimBridge observable notebook:
