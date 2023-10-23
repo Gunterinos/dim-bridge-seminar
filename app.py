@@ -16,20 +16,35 @@ from base64 import b64encode
 # create Flask app
 app = Flask(__name__)
 CORS(app)
-device = 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def predict(x, a, mu):
-    '''UMAP-inspired predict function
-    x - torch tensor, shape [n_data_points, n_features]
-    a - torch tensor, shape [n_features]
-        1/a.abs() is the extent of bounding box at prediction=0.5
-    mu - torch tensor, shape [n_features]
-    b - scalar. hyper parameter for predict function. Power exponent
+    r'''
+    UMAP-inspired predict function.
+    A bump function centered at $\\mu$ with extent determined by $1/|a|$.
+
+    $$ pred = \frac{1}{1+ \sum_{i=1}^{p} |a_i| * |x_i - \mu_i|^{b}} $$
+
+    Parameters
+    ----------
+    x - Torch tensor, shape [n_data_points, n_features]
+        Input data points
+    a - Torch tensor, shape [n_features]
+        A parameter for the bounding box extent. 1/a.abs() is the extent of bounding box at prediction=0.5
+    mu - Torch tensor, shape [n_features]
+        A parameter for the bounding box center
+    b - Scalar.
+        Hyperparameter for predict function. Power exponent
+
+    Returns
+    -------
+    pred - Torch tensor of predction for each point in x, shape = [n_data_points, 1]
     '''
 
     b = 5
-    return 1 / (1 + ((a.abs() * (x - mu).abs()).pow(b)).sum(1))
+    pred = 1 / (1 + ((a.abs() * (x - mu).abs()).pow(b)).sum(1))
+    return pred
 
 # test: UMAP-inspired predict function
 # n = 100
@@ -165,22 +180,25 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
     selection_centroids = torch.stack(
         [x[sel_t].mean(0) for sel_t in selected], 0)
 
+    # initialize the bounding box center (mu) at the data centroid, +-0.1 at random
     if mu_init is None:
         mu_init = selection_centroids
-    a = (a_init + 0.1*(2*torch.rand(n_brushes, n_features)-1)).to(device)
-    mu = (mu_init + 0.1 *
-          (2*torch.rand(n_brushes, x.shape[1], device=device) - 1))
+    a = (a_init + 0.1 * (2 * torch.rand(n_brushes, n_features) - 1)).to(device)
+    mu = (mu_init + 0.1
+          * (2 * torch.rand(n_brushes, x.shape[1], device=device) - 1))
     a.requires_grad_(True)
     mu.requires_grad_(True)
 
+    # For each brush,
     # weight-balance selected vs. unselected based on their size
+    # and create a weighted BCE loss function (for each brush)
     bce_per_brush = []
     for st in selected:  # for each brush, define their class-balanced loss function
         n_selected = st.sum()  # st is numpy array
         n_unselected = n_points - n_selected
         instance_weight = torch.ones(x.shape[0]).to(device)
-        instance_weight[st] = n_points/n_selected
-        instance_weight[~st] = n_points/n_unselected
+        instance_weight[st] = n_points / n_selected
+        instance_weight[~st] = n_points / n_unselected
         bce = nn.BCELoss(weight=instance_weight)
         bce_per_brush.append(bce)
 
@@ -194,12 +212,15 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
     for e in range(n_iter):
         loss_per_brush = []
         for t, st in enumerate(selected):  # for each brush, compute loss
+            # TODO try subsample:
+            # use all selected data
+            # randomly sample unselected data with similar size
             pred = predict(x, a[t], mu[t])
             loss = bce(pred, label[t])
             loss += (mu[t] - selection_centroids[t]).pow(2).mean() * 20
             loss_per_brush.append(loss)
-        smoothness_loss = 100 * (a[1:]-a[:-1]).pow(2).mean()
-        smoothness_loss += 100 * (mu[1:]-mu[:-1]).pow(2).mean()
+        smoothness_loss = 100 * (a[1:] - a[:-1]).pow(2).mean()
+        smoothness_loss += 100 * (mu[1:] - mu[:-1]).pow(2).mean()
         # print('bce', loss_per_brush)
         # print('smoothness', smoothness_loss.item())
         sparsity_loss = 0  # a.abs().mean() * 100
@@ -207,7 +228,7 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
-        if e % (n_iter//5) == 0:
+        if e % (n_iter // 5) == 0:
             # print(pred.min().item(), pred.max().item())
             print(f'[{e:>4}] loss {loss.item()}')
     a.detach_()
@@ -215,19 +236,19 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
     # plt.stem(a.abs().numpy()); plt.show()
 
     qualities = []
-    for t, st in enumerate(selected):  # for each brush, compute loss
+    for t, st in enumerate(selected):  # for each brush, compute quality
         pred = predict(x, a[t], mu[t])
         pred = (pred > 0.5).float()
         correct = (pred == label[t]).float().sum().item()
         total = n_points
-        accuracy = correct/total
+        accuracy = correct / total
         # 1 meaning points are selected
         tp = ((pred == 1).float() * (label == 1).float()).sum().item()
         fp = ((pred == 1).float() * (label == 0).float()).sum().item()
         fn = ((pred == 0).float() * (label == 1).float()).sum().item()
-        precision = tp/(tp+fp) if tp+fp > 0 else 0
-        recall = tp/(tp+fn) if tp+fn > 0 else 0
-        f1 = 1/(1/precision + 1/recall) if precision > 0 and recall > 0 else 0
+        precision = tp / (tp + fp) if tp + fp > 0 else 0
+        recall = tp / (tp + fn) if tp + fn > 0 else 0
+        f1 = 1 / (1 / precision + 1 / recall) if precision > 0 and recall > 0 else 0
         print(dedent(f'''
             brush = {t}
             accuracy = {accuracy}
@@ -352,4 +373,4 @@ if __name__ == '__main__':
     # print(opt)
     # embedding = np.load(opt.embedding_fn)
 
-    app.run(host='0.0.0.0', port=9001, debug=True)
+    app.run(host='0.0.0.0', port=9001, debug=False)
