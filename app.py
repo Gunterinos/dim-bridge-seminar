@@ -11,16 +11,17 @@ import pandas as pd
 
 from textwrap import dedent
 from base64 import b64encode
+
 # from tqdm import tqdm
 
 # create Flask app
 app = Flask(__name__)
 CORS(app)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def predict(x, a, mu):
-    r'''
+    r"""
     UMAP-inspired predict function.
     A bump function centered at $\\mu$ with extent determined by $1/|a|$.
 
@@ -40,11 +41,12 @@ def predict(x, a, mu):
     Returns
     -------
     pred - Torch tensor of predction for each point in x, shape = [n_data_points, 1]
-    '''
+    """
 
     b = 5
     pred = 1 / (1 + ((a.abs() * (x - mu).abs()).pow(b)).sum(1))
     return pred
+
 
 # test: UMAP-inspired predict function
 # n = 100
@@ -107,55 +109,61 @@ def predict(x, a, mu):
 #     a.detach_()
 #     mu.detach_()
 #     # plt.stem(a.abs().numpy()); plt.show()
-    # pred = (pred > 0.5).float()
-    # correct = (pred == label).float().sum().item()
-    # total = selected.shape[0]
-    # accuracy = correct/total
-    # # 1 meaning points are selected
-    # tp = ((pred == 1).float() * (label == 1).float()).sum().item()
-    # fp = ((pred == 1).float() * (label == 0).float()).sum().item()
-    # fn = ((pred == 0).float() * (label == 1).float()).sum().item()
-    # precision = tp/(tp+fp)
-    # recall = tp/(tp+fn)
-    # f1 = 1/(1/precision + 1/recall)
-    # print(f'''
+# pred = (pred > 0.5).float()
+# correct = (pred == label).float().sum().item()
+# total = selected.shape[0]
+# accuracy = correct/total
+# # 1 meaning points are selected
+# tp = ((pred == 1).float() * (label == 1).float()).sum().item()
+# fp = ((pred == 1).float() * (label == 0).float()).sum().item()
+# fn = ((pred == 0).float() * (label == 1).float()).sum().item()
+# precision = tp/(tp+fp)
+# recall = tp/(tp+fn)
+# f1 = 1/(1/precision + 1/recall)
+# print(f'''
 # accuracy = {correct/total}
 # precision = {precision}
 # recall = {recall}
 # f1 = {f1}
-    # ''')
-    # # predicate clause selection
-    # # r is the range of the bounding box on each dimension
-    # # bounding box is defined by the level set of prediction=0.5
-    # r = 1 / a.abs()
-    # predicates = []
-    # for k in range(mu.shape[0]):
-    #     # denormalize
-    #     r_k = (r[k] * scale[k]).item()
-    #     mu_k = (mu[k] * scale[k] + mean[k]).item()
-    #     ci = [mu_k - r_k, mu_k + r_k]
-    #     assert ci[0] < ci[1], 'ci[0] is not less than ci[1]'
-    #     if ci[0] < vmin[k]:
-    #         ci[0] = vmin[k]
-    #     if ci[1] > vmax[k]:
-    #         ci[1] = vmax[k]
-    #     # feature selection based on extent range
+# ''')
+# # predicate clause selection
+# # r is the range of the bounding box on each dimension
+# # bounding box is defined by the level set of prediction=0.5
+# r = 1 / a.abs()
+# predicates = []
+# for k in range(mu.shape[0]):
+#     # denormalize
+#     r_k = (r[k] * scale[k]).item()
+#     mu_k = (mu[k] * scale[k] + mean[k]).item()
+#     ci = [mu_k - r_k, mu_k + r_k]
+#     assert ci[0] < ci[1], 'ci[0] is not less than ci[1]'
+#     if ci[0] < vmin[k]:
+#         ci[0] = vmin[k]
+#     if ci[1] > vmax[k]:
+#         ci[1] = vmax[k]
+#     # feature selection based on extent range
 # #         should_include = r[k] < 1.0 * (x[:,k].max()-x[:,k].min())
-    #     should_include = not (ci[0] <= vmin[k] and ci[1] >= vmax[k])
-    #     if should_include:
-    #         predicates.append(dict(
-    #             dim=k, interval=ci
-    #         ))
-    # for p in predicates:
-    #     print(p)
-    # return predicates, mu, a, [accuracy, precision, recall, f1]
+#     should_include = not (ci[0] <= vmin[k] and ci[1] >= vmax[k])
+#     if should_include:
+#         predicates.append(dict(
+#             dim=k, interval=ci
+#         ))
+# for p in predicates:
+#     print(p)
+# return predicates, mu, a, [accuracy, precision, recall, f1]
 
 
-def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
-    '''
-        x0 - numpy array, shape=[n_points, n_feature]. Data points
-        selected - boolean array. shape=[brush_index, n_points] of selection
-    '''
+def compute_predicate_sequence(
+    x0,
+    selected,
+    attribute_names=[],
+    n_iter=1000,
+    device=device,
+):
+    """
+    x0 - numpy array, shape=[n_points, n_feature]. Data points
+    selected - boolean array. shape=[brush_index, n_points] of selection
+    """
     mu_init = None
     a_init = 0.4
 
@@ -177,15 +185,13 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
     # since data is normalized,
     # mu can initialized around mean_pos examples
     # a can initialized around a constant across all axes
-    selection_centroids = torch.stack(
-        [x[sel_t].mean(0) for sel_t in selected], 0)
+    selection_centroids = torch.stack([x[sel_t].mean(0) for sel_t in selected], 0)
 
     # initialize the bounding box center (mu) at the data centroid, +-0.1 at random
     if mu_init is None:
         mu_init = selection_centroids
     a = (a_init + 0.1 * (2 * torch.rand(n_brushes, n_features) - 1)).to(device)
-    mu = (mu_init + 0.1
-          * (2 * torch.rand(n_brushes, x.shape[1], device=device) - 1))
+    mu = mu_init + 0.1 * (2 * torch.rand(n_brushes, x.shape[1], device=device) - 1)
     a.requires_grad_(True)
     mu.requires_grad_(True)
 
@@ -202,11 +208,15 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
         bce = nn.BCELoss(weight=instance_weight)
         bce_per_brush.append(bce)
 
-    optimizer = optim.SGD([
-        {'params': mu, 'weight_decay': 0},
-        # smaller a encourages larger reach of the bounding box
-        {'params': a, 'weight_decay': 0.01}
-    ], lr=1e-2, momentum=0.9)
+    optimizer = optim.SGD(
+        [
+            {"params": mu, "weight_decay": 0},
+            # smaller a encourages larger reach of the bounding box
+            {"params": a, "weight_decay": 0.01},
+        ],
+        lr=1e-2,
+        momentum=0.9,
+    )
 
     # training loop
     for e in range(n_iter):
@@ -230,7 +240,7 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
         optimizer.step()
         if e % (n_iter // 5) == 0:
             # print(pred.min().item(), pred.max().item())
-            print(f'[{e:>4}] loss {loss.item()}')
+            print(f"[{e:>4}] loss {loss.item()}")
     a.detach_()
     mu.detach_()
     # plt.stem(a.abs().numpy()); plt.show()
@@ -248,21 +258,21 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
         fn = ((pred == 0).float() * (label == 1).float()).sum().item()
         precision = tp / (tp + fp) if tp + fp > 0 else 0
         recall = tp / (tp + fn) if tp + fn > 0 else 0
-        f1 = 1 / (1 / precision + 1 / recall) if precision > 0 and recall > 0 else 0
-        print(dedent(f'''
+        f1 = 2 / (1 / precision + 1 / recall) if precision > 0 and recall > 0 else 0
+        print(
+            dedent(
+                f"""
             brush = {t}
             accuracy = {accuracy}
             precision = {precision}
             recall = {recall}
             f1 = {f1}
-        '''))
-        qualities.append(dict(
-            brush=t,
-            accuracy=accuracy,
-            precision=precision,
-            recall=recall,
-            f1=f1
-        ))
+        """
+            )
+        )
+        qualities.append(
+            dict(brush=t, accuracy=accuracy, precision=precision, recall=recall, f1=f1)
+        )
 
     # predicate clause selection
     # r is the range of the bounding box on each dimension
@@ -279,48 +289,57 @@ def compute_predicate_sequence(x0, selected, n_iter=1000, device=device):
             r_k = (r[k] * scale[k]).item()
             mu_k = (mu[t, k] * scale[k] + mean[k]).item()
             ci = [mu_k - r_k, mu_k + r_k]
-            assert ci[0] < ci[1], 'ci[0] is not less than ci[1]'
+            assert ci[0] < ci[1], "ci[0] is not less than ci[1]"
             if ci[0] < vmin[k]:
                 ci[0] = vmin[k]
             if ci[1] > vmax[k]:
                 ci[1] = vmax[k]
 
             # feature selection based on extent range
-    #         should_include = r[k] < 1.0 * (x[:,k].max()-x[:,k].min())
+            #         should_include = r[k] < 1.0 * (x[:,k].max()-x[:,k].min())
             should_include = not (ci[0] <= vmin[k] and ci[1] >= vmax[k])
+
             if should_include:
                 if ci[0] < vmin_selected:
                     ci[0] = vmin_selected
                 if ci[1] > vmax_selected:
                     ci[1] = vmax_selected
-                predicate_clauses.append(dict(
-                    dim=k, interval=ci
-                ))
+                predicate_clauses.append(dict(dim=k, interval=ci, attribute=""))
         predicates.append(predicate_clauses)
     parameters = dict(mu=mu, a=a)
     return predicates, qualities, parameters
 
 
+def load_data(dataset):
+    '''dataset - name of the file on disk'''
+    df = pd.read_csv(f"./dataset/{dataset}.csv")
+    # drop certain columns if needed
+    # TODO should be done without hard coding
+    for attr in ["x", "y", "image_filename", "replication", "gene"]:
+        if attr in df.columns:
+            df = df.drop(attr, axis="columns")
+    if dataset == "gait1":
+        df = df[::6, :]
+    x0 = df.to_numpy()
+    columns = df.columns
+    return x0, columns
+
+
 current_dataset = None
 x0 = None
+columns = None
 
 
-@app.route('/get_predicates', methods=['POST'])
+@app.route("/get_predicates", methods=["POST"])
 def get_predicate():
-    global current_dataset, x0
-    dataset = request.json['dataset']
+    global current_dataset, x0, columns
+    dataset = request.json["dataset"]
     # load dataset csv
     if current_dataset != dataset:
-        df = pd.read_csv(f'./dataset/{dataset}.csv')
-        for attr in ['x', 'y', 'image_filename', 'replication']:
-            if attr in df.columns:
-                df = df.drop(attr, axis='columns')
-        if dataset == 'gait1':
-            df = df[::6, :]
-        x0 = df.to_numpy()
+        x0, columns = load_data(dataset)
         current_dataset = dataset
     # a sequence of bool arrays indexed by [brush time, data point index]
-    subsets = np.array(request.json['subsets'])
+    subsets = np.array(request.json["subsets"])
 
     # # Option 1: each brush is indepedently optimized through compute_predicate()
     # predicates = []
@@ -341,9 +360,9 @@ def get_predicate():
 
     # Option 2: jointly optimize the sequence
     predicates, qualities, parameters = compute_predicate_sequence(
-        x0, subsets, n_iter=1000)
+        x0, subsets, attribute_names=columns, n_iter=1000
+    )
 
-    # TODO compute and report precision recall accuracy and  F1
     return dict(
         predicates=predicates,
         qualities=qualities,
@@ -362,8 +381,7 @@ def get_predicate():
 # df = pd.read_csv('./dataset/gait_joined.csv')
 # x0 = df.to_numpy()
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # parser = argparse.ArgumentParser()
     # parser.add_argument(
     #     '--embedding_fn',
@@ -373,4 +391,4 @@ if __name__ == '__main__':
     # print(opt)
     # embedding = np.load(opt.embedding_fn)
 
-    app.run(host='0.0.0.0', port=9001, debug=False)
+    app.run(host="0.0.0.0", port=9001, debug=False)
