@@ -304,18 +304,31 @@ def compute_predicate_sequence(
                     ci[0] = vmin_selected
                 if ci[1] > vmax_selected:
                     ci[1] = vmax_selected
-                predicate_clauses.append(dict(dim=k, interval=ci, attribute=""))
+                predicate_clauses.append(
+                    dict(
+                        dim=k,
+                        interval=ci,
+                        attribute=columns[k],
+                    )
+                )
         predicates.append(predicate_clauses)
     parameters = dict(mu=mu, a=a)
     return predicates, qualities, parameters
 
 
 def load_data(dataset):
-    '''dataset - name of the file on disk'''
+    """dataset - name of the file on disk"""
     df = pd.read_csv(f"./dataset/{dataset}.csv")
     # drop certain columns if needed
     # TODO should be done without hard coding
-    for attr in ["x", "y", "image_filename", "replication", "gene"]:
+    for attr in [
+        "x",  # all
+        "y",  # all
+        "image_filename",  # animals
+        "replication",  # for gaits
+        "gene",  # for genes
+        "id",  # for genes
+    ]:
         if attr in df.columns:
             df = df.drop(attr, axis="columns")
     if dataset == "gait1":
@@ -340,6 +353,7 @@ def get_predicate():
         current_dataset = dataset
     # a sequence of bool arrays indexed by [brush time, data point index]
     subsets = np.array(request.json["subsets"])
+    print(x0.shape)
 
     # # Option 1: each brush is indepedently optimized through compute_predicate()
     # predicates = []
