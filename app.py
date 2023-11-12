@@ -48,111 +48,6 @@ def predict(x, a, mu):
     return pred
 
 
-# test: UMAP-inspired predict function
-# n = 100
-# x = torch.linspace(-3,3,n).view(n,1)
-# a = torch.tensor(0.5)
-# plt.plot(x, predict(x, a))
-
-
-# def compute_predicate(x0, selected, n_iter=1000, mu_init=None, a_init=0.4):
-#     '''
-#         x0 - numpy array, shape=[n_points, n_feature]. Data points
-#         selected - boolean array. shape=[n_points] of selection
-#     '''
-#     # prepare training data
-#     # orginal data extent
-#     n_points, n_features = x0.shape
-#     vmin = x0.min(0)
-#     vmax = x0.max(0)
-#     x = torch.from_numpy(x0.astype(np.float32))
-#     label = torch.from_numpy(selected).float()
-#     # normalize
-#     mean = x.mean(0)
-#     scale = x.std(0) + 0.1
-#     x = (x - mean) / scale
-#     # Trainable parameters
-#     # since data is normalized,
-#     # mu can initialized around mean_pos examples
-#     # a can initialized around a constant across all axes
-#     center_selected = x[selected].mean(0)
-#     if mu_init is None:
-#         mu_init = center_selected
-#     a = (a_init + 0.1*(2*torch.rand(n_features)-1))
-#     mu = mu_init + 0.1 * (2*torch.rand(x.shape[1]) - 1)
-#     a.requires_grad_(True)
-#     mu.requires_grad_(True)
-#     # weight-balance selected vs. unselected based on their size
-#     n_selected = selected.sum()
-#     n_unselected = n_points - n_selected
-#     instance_weight = torch.ones(x.shape[0])
-#     instance_weight[selected] = n_points/n_selected
-#     instance_weight[~selected] = n_points/n_unselected
-#     bce = nn.BCELoss(weight=instance_weight)
-#     optimizer = optim.SGD([
-#         {'params': mu, 'weight_decay': 0},
-#         # smaller a encourages larger reach of the bounding box
-#         {'params': a, 'weight_decay': 0.0}
-#     ], lr=1e-2, momentum=0.9)
-#     # training loop
-#     for e in range(n_iter):
-#         pred = predict(x, a, mu)
-#         loss = bce(pred, label)
-#         loss += (mu - center_selected).pow(2).mean() * 20
-#         # loss += a.abs().mean() * 100
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
-#         if e % (n_iter//5) == 0:
-#             # print(pred.min().item(), pred.max().item())
-#             print(f'[{e:>4}] loss {loss.item()}')
-#     a.detach_()
-#     mu.detach_()
-#     # plt.stem(a.abs().numpy()); plt.show()
-# pred = (pred > 0.5).float()
-# correct = (pred == label).float().sum().item()
-# total = selected.shape[0]
-# accuracy = correct/total
-# # 1 meaning points are selected
-# tp = ((pred == 1).float() * (label == 1).float()).sum().item()
-# fp = ((pred == 1).float() * (label == 0).float()).sum().item()
-# fn = ((pred == 0).float() * (label == 1).float()).sum().item()
-# precision = tp/(tp+fp)
-# recall = tp/(tp+fn)
-# f1 = 1/(1/precision + 1/recall)
-# print(f'''
-# accuracy = {correct/total}
-# precision = {precision}
-# recall = {recall}
-# f1 = {f1}
-# ''')
-# # predicate clause selection
-# # r is the range of the bounding box on each dimension
-# # bounding box is defined by the level set of prediction=0.5
-# r = 1 / a.abs()
-# predicates = []
-# for k in range(mu.shape[0]):
-#     # denormalize
-#     r_k = (r[k] * scale[k]).item()
-#     mu_k = (mu[k] * scale[k] + mean[k]).item()
-#     ci = [mu_k - r_k, mu_k + r_k]
-#     assert ci[0] < ci[1], 'ci[0] is not less than ci[1]'
-#     if ci[0] < vmin[k]:
-#         ci[0] = vmin[k]
-#     if ci[1] > vmax[k]:
-#         ci[1] = vmax[k]
-#     # feature selection based on extent range
-# #         should_include = r[k] < 1.0 * (x[:,k].max()-x[:,k].min())
-#     should_include = not (ci[0] <= vmin[k] and ci[1] >= vmax[k])
-#     if should_include:
-#         predicates.append(dict(
-#             dim=k, interval=ci
-#         ))
-# for p in predicates:
-#     print(p)
-# return predicates, mu, a, [accuracy, precision, recall, f1]
-
-
 def compute_predicate_sequence(
     x0,
     selected,
@@ -304,11 +199,17 @@ def compute_predicate_sequence(
                     ci[0] = vmin_selected
                 if ci[1] > vmax_selected:
                     ci[1] = vmax_selected
+
+                column_array = x0[:, k]
+                # Use NumPy logical indexing to filter the column array by the range
+                filtered_array = column_array[(column_array >= ci[0]) & (column_array <= ci[1])]
+
                 predicate_clauses.append(
                     dict(
                         dim=k,
                         interval=ci,
                         attribute=columns[k],
+                        count=filtered_array.size,
                     )
                 )
         predicates.append(predicate_clauses)
@@ -335,74 +236,86 @@ def load_data(dataset):
         df = df[::6, :]
     x0 = df.to_numpy()
     columns = df.columns
-    return x0, columns
+    return x0, columns, df
 
 
 current_dataset = None
 x0 = None
 columns = None
+dataset_name = '1000_hs_healthy_with_tsne_perplexity_adjust' 
+# '1000_hs_healthy_with_tsne'
+data_holder = None
 
+@app.route('/get_att_extents', methods=['GET'])
+def get_att_extents():
+    dataset = dataset_name
+    print('DATA HOLDER??',data_holder)
+    df = pd.read_csv(f'./dataset/{dataset}.csv')
+    
+
+@app.route('/get_projection_scatter', methods=['GET'])
+def get_projection_scatter():
+    dataset = dataset_name
+    df = pd.read_csv(f'./dataset/{dataset}.csv')
+
+    lister = df[['id', 'x', 'y']].to_csv(index=False)
+  
+    return lister
+
+@app.route('/get_data')
+def get_data():
+    # f = pd.read_csv('./dataset/filtered_hs_healthy_1_with_tsne.csv')
+    # f = open('./dataset/filtered_hs_healthy_1_with_tsne.csv', "r")
+    f = open(f'./dataset/{dataset_name}.csv', "r")
+    # print(f.read())
+    # 'dataset/filtered_hs_healthy_1_with_tsne.csv'
+    return f.read()
 
 @app.route("/get_predicates", methods=["POST"])
 def get_predicate():
     global current_dataset, x0, columns
     dataset = request.json["dataset"]
     # load dataset csv
-    if current_dataset != dataset:
-        x0, columns = load_data(dataset)
-        current_dataset = dataset
+    # if current_dataset != dataset:
+    x0, columns, data_holder = load_data(dataset)
+    current_dataset = dataset
     # a sequence of bool arrays indexed by [brush time, data point index]
     subsets = np.array(request.json["subsets"])
-    print(x0.shape)
-
-    # # Option 1: each brush is indepedently optimized through compute_predicate()
-    # predicates = []
-    # qualities = []
-    # mu = None
-    # a = 0.4
-    # for t, subset in enumerate(subsets):
-    #     predicate, mu, a, [accuracy, precision, recall, f1] = compute_predicate(
-    #         x0, subset, mu_init=mu, a_init=a)
-    #     predicates.append(predicate)
-    #     qualities.append(dict(
-    #         brush=t,
-    #         accuracy=accuracy,
-    #         precision=precision,
-    #         recall=recall,
-    #         f1=f1,
-    #     ))
 
     # Option 2: jointly optimize the sequence
     predicates, qualities, parameters = compute_predicate_sequence(
-        x0, subsets, attribute_names=columns, n_iter=1000
+        x0, subsets, attribute_names=columns, n_iter=500
     )
+
+    sorted_pred = []
+    for pre in predicates:
+        sorted_pred.append(sorted(pre, key=lambda x: x['interval'][1]))
+
+    id_array = []
+
+    for predicate in sorted_pred:
+        data_test = data_holder.copy()
+        data_test['id'] = data_test.index
+        for pred in predicate:
+            feature = pred['attribute']
+            if feature != 'x' and feature != 'y':
+                temp = data_test[data_test[feature] >= pred['interval'][0]]
+                temp = temp[temp[feature] <= pred['interval'][1]]
+                if(temp.empty):
+                    print(pred)
+                
+                else:
+                    data_test = temp.copy()
+        id_array.append(data_test['id'].to_list())
+
 
     return dict(
         predicates=predicates,
         qualities=qualities,
+        selected_ids=id_array
     )
 
 
-# embedding = None
-# @app.route('/get_embedding', methods=['GET'])
-# def get_embedding():
-#     return {
-#         'shape': embedding.shape,
-#         'value': b64encode(embedding.astype(np.float32).tobytes()).decode()
-#     }
-
-
-# df = pd.read_csv('./dataset/gait_joined.csv')
-# x0 = df.to_numpy()
-
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     '--embedding_fn',
-    #     required=True,
-    #     help='embedding file')
-    # opt = parser.parse_args()
-    # print(opt)
-    # embedding = np.load(opt.embedding_fn)
 
     app.run(host="0.0.0.0", port=9001, debug=False)
