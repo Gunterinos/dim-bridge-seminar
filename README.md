@@ -24,6 +24,9 @@ Original version:
 https://observablehq.com/d/bc84ced61d90006e
 
 Jen's version:
+https://observablehq.com/d/5c05aecd48c4eed5
+
+Jen's backup version
 https://observablehq.com/d/1e642c90d6c45083
 
 1. If this predicate server is not localhost...
