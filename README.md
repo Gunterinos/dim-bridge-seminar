@@ -12,14 +12,22 @@ https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0
 ```unzip dimbridge-dataset.zip```
 A new dataset/ directory will show up
 
-1. Use your favorite virtualenv, install python dependencies:
+1. Use your favorite virtualenv*, install python dependencies:
+    (note from Jen: I use `python3 -m venv venv` and `source venv/bin/activate`)
 ```pip install -r requirements.txt```
 
 1. Start the server on port 9001: 
 ```python app.py```
 
 1. Open the DimBridge observable notebook:
+Original version:
 https://observablehq.com/d/bc84ced61d90006e
+
+Jen's version:
+https://observablehq.com/d/5c05aecd48c4eed5
+
+Jen's backup version
+https://observablehq.com/d/1e642c90d6c45083
 
 1. If this predicate server is not localhost...
     1. If the remote server machine does not have a public ip but you have ssh access, you can forward port 9001 of the remote server to the same port on the local machine that you run obserable notebook on:

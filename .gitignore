@@ -3,3 +3,4 @@ dataset/
 xy.npy
 unused/
 static/
+venv/
