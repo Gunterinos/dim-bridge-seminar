@@ -9,6 +9,7 @@ from flask_cors import CORS
 import numpy as np
 import pandas as pd
 
+import io
 from textwrap import dedent
 from base64 import b64encode
 
@@ -341,6 +342,15 @@ def load_data(dataset):
 current_dataset = None
 x0 = None
 columns = None
+
+
+@app.route("/get_dummy", methods=["GET"])
+def get_dummy():
+    bytes_io = io.BytesIO()
+    array = np.random.randn(10, 4)
+    np.save(bytes_io, array)
+    byte_value = bytes_io.getvalue()
+    return byte_value
 
 
 @app.route("/get_predicates", methods=["POST"])
