@@ -5,6 +5,7 @@ from torch import optim
 from flask import Flask
 from flask import request
 from flask_cors import CORS
+from flask import send_from_directory, send_file
 
 import numpy as np
 import pandas as pd
@@ -324,6 +325,7 @@ def load_data(
         "x",  # all
         "y",  # all
         "image_filename",  # animals
+        "image_url",  # animals
         "replication",  # for gaits
         "gene",  # for genes
         "id",  # for genes
@@ -346,12 +348,17 @@ def load_data(
         List of column names
     """
 
-    df = pd.read_csv(dataset_filename)
-    # drop certain columns if needed
-    # TODO should be done without hard coding
+    df = pd.read_csv(dataset_filename, )
+
+    #drop all string columns
+    for column in df.columns:
+        if df[column].dtype == 'O':
+            df = df.drop(column, axis="columns")
+    # drop exclude_columns
     for attr in exclude_columns:
         if attr in df.columns:
             df = df.drop(attr, axis="columns")
+
     # if dataset == "gait1":
     #     df = df[::6, :]
     x0 = df.to_numpy()
@@ -373,6 +380,13 @@ def get_dummy():
     return byte_value
 
 
+@app.route("/get_dataset/<dataset_name>")
+def get_dataset(dataset_name):
+    # return send_from_directory('datasets', path)
+    dataset_filename = glob(f"./datasets/{dataset_name}/*.csv")[0]
+    return send_file(dataset_filename)
+
+
 @app.route("/get_predicates", methods=["POST"])
 def get_predicate():
     global current_dataset, x0, columns
@@ -384,6 +398,7 @@ def get_predicate():
         # assumes only one csv file under the directory
         dataset_filename = glob(f"./datasets/{dataset}/*.csv")[0]
         x0, columns = load_data(dataset_filename)
+        print('data columns', columns)
         current_dataset = dataset
 
     # Get the subsets of selected points, a 2D array of boolean values
