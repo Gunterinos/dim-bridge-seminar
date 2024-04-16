@@ -1,6 +1,6 @@
+.DS_Store/
 .ipynb_checkpoints/
-dataset/
-xy.npy
+datasets/
 unused/
 static/
 venv/

@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 import io
+from glob import glob
 from textwrap import dedent
 from base64 import b64encode
 
@@ -317,23 +318,42 @@ def compute_predicate_sequence(
     return predicates, qualities, parameters
 
 
-def load_data(dataset):
-    """dataset - name of the file on disk"""
-    df = pd.read_csv(f"./dataset/{dataset}.csv")
-    # drop certain columns if needed
-    # TODO should be done without hard coding
-    for attr in [
+def load_data(
+    dataset_filename,
+    exclude_columns=[
         "x",  # all
         "y",  # all
         "image_filename",  # animals
         "replication",  # for gaits
         "gene",  # for genes
         "id",  # for genes
-    ]:
+    ],
+):
+    """
+    Load csv data for predicate induction,
+
+    Parameters
+    ----------
+    dataset_filename: path to the dataset file (csv) on disk,
+    exclude_columns: list of column names to be excluded in the predicate induction
+                    (e.g, categorical attributes, id, index columns, etc)
+
+    Returns
+    -------
+    x0: numpy array, shape == [n_points, n_columns]
+        numeric values in the dataset as a 2D numpy array
+    columns: list
+        List of column names
+    """
+
+    df = pd.read_csv(dataset_filename)
+    # drop certain columns if needed
+    # TODO should be done without hard coding
+    for attr in exclude_columns:
         if attr in df.columns:
             df = df.drop(attr, axis="columns")
-    if dataset == "gait1":
-        df = df[::6, :]
+    # if dataset == "gait1":
+    #     df = df[::6, :]
     x0 = df.to_numpy()
     columns = df.columns
     return x0, columns
@@ -356,12 +376,18 @@ def get_dummy():
 @app.route("/get_predicates", methods=["POST"])
 def get_predicate():
     global current_dataset, x0, columns
+    print("[request keys]", request.json.keys())
     dataset = request.json["dataset"]
+
     # load dataset csv
-    if current_dataset != dataset:
-        x0, columns = load_data(dataset)
+    if current_dataset != dataset:  # TODO keep track of multiple datasets
+        # assumes only one csv file under the directory
+        dataset_filename = glob(f"./datasets/{dataset}/*.csv")[0]
+        x0, columns = load_data(dataset_filename)
         current_dataset = dataset
-    # a sequence of bool arrays indexed by [brush time, data point index]
+
+    # Get the subsets of selected points, a 2D array of boolean values
+    # indexed by [brush number, data point index]
     subsets = np.array(request.json["subsets"])
     print(x0.shape)
 
@@ -402,7 +428,7 @@ def get_predicate():
 #     }
 
 
-# df = pd.read_csv('./dataset/gait_joined.csv')
+# df = pd.read_csv('./datasets/gait_joined.csv')
 # x0 = df.to_numpy()
 
 if __name__ == "__main__":
