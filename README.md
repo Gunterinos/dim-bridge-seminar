@@ -20,11 +20,11 @@ TODO
 
 1. ```cd dim-bridge```
 
-~~ 1.Download dataset from Box as a zip file to the root of this repo: ~~
-~~ https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0 ~~
-~~ 1. Unzip: ~~
-~~ ```unzip dimbridge-dataset.zip``` ~~
-~~ A new dataset/ directory will show up ~~
+~~1.Download dataset from Box as a zip file to the root of this repo:~~
+~~https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0~~
+~~1. Unzip:~~
+~~```unzip dimbridge-dataset.zip```~~
+~~A new dataset/ directory will show up~~
 
 1.Download dataset from Box, unzip it, and place the images folder to the dataset/animals5/images:
 https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh
