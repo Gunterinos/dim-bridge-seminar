@@ -1,3 +1,6 @@
+# DimBridge
+
+
 ## Breaking Changes
 
 - The latest front end (https://observablehq.com/@tiga1231/dim-bridge) expect images of data points stored in a `image_url` column in the data file (csv), e.g., http://host:port/path/to/image.png
@@ -33,6 +36,7 @@ A new dataset/ directory will show up
 ```python app.py```
 
 1. Open the DimBridge observable notebook:
+
 WebGL version:
 https://observablehq.com/@tiga1231/dim-bridge
 
