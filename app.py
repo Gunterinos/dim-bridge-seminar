@@ -14,6 +14,8 @@ import io
 from glob import glob
 from textwrap import dedent
 from base64 import b64encode
+from natsort import natsorted
+import os
 
 # from tqdm import tqdm
 
@@ -348,11 +350,13 @@ def load_data(
         List of column names
     """
 
-    df = pd.read_csv(dataset_filename, )
+    df = pd.read_csv(
+        dataset_filename,
+    )
 
-    #drop all string columns
+    # drop all string columns
     for column in df.columns:
-        if df[column].dtype == 'O':
+        if df[column].dtype == "O":
             df = df.drop(column, axis="columns")
     # drop exclude_columns
     for attr in exclude_columns:
@@ -380,6 +384,16 @@ def get_dummy():
     return byte_value
 
 
+@app.route("/get_dataset_names", methods=["GET"])
+def get_dataset_names():
+    dataset_dir = "./datasets"
+    return [
+        d
+        for d in os.listdir(dataset_dir)
+        if os.path.isdir(os.path.join(dataset_dir, d))
+    ]
+
+
 @app.route("/get_dataset/<dataset_name>")
 def get_dataset(dataset_name):
     # return send_from_directory('datasets', path)
@@ -392,13 +406,15 @@ def get_predicate():
     global current_dataset, x0, columns
     print("[request keys]", request.json.keys())
     dataset = request.json["dataset"]
+    if dataset.endswith('_local'):
+        dataset = dataset[:-len('_local')]
 
     # load dataset csv
     if current_dataset != dataset:  # TODO keep track of multiple datasets
         # assumes only one csv file under the directory
         dataset_filename = glob(f"./datasets/{dataset}/*.csv")[0]
         x0, columns = load_data(dataset_filename)
-        print('data columns', columns)
+        print("data columns", columns)
         current_dataset = dataset
 
     # Get the subsets of selected points, a 2D array of boolean values

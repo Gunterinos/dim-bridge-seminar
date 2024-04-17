@@ -1,0 +1,8 @@
+services:
+  app:
+    image: dim-bridge
+    ports:
+      - 9001:9001
+    working_dir: /dim-bridge
+    volumes:
+      - ./datasets:/dim-bridge/datasets
