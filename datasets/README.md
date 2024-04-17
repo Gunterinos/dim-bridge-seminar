@@ -1,21 +1,25 @@
-dataset goes here
+Dataset goes here.
+
+The dataset directories is structured as:
 
 ```
 .
-├── 1000_hs_healthy_with_tsne.csv
-├── 1000_hs_healthy_with_tsne_perplexity_adjust.csv
-├── animals1.csv
-├── animals2.csv
-├── animals3.csv
-├── animals4.csv
-├── animals5/
-├── animals5.csv
-├── gait1.csv
-├── gait2.csv
-├── gait_raw.csv
-├── iris.csv
-├── meuse.txt
-├── pigments/
-├── pigments.csv -> pigments/pigments.csv
-└── README.md
+├── README.md
+├── animals5
+│   ├── animals5.csv
+│   └── images
+└── gait2
+    └── gait2.csv
 ```
+
+where images are usually named in the order of the corresponding data items, e.g.:
+```
+<dataset_name>/<dataset_name>.csv
+<dataset_name>/images/0.png
+<dataset_name>/images/1.png
+...
+<dataset_name>/images/1000.png
+```
+But it is not neccessary, as long as the dataset stores the full URL to the images in the `image_url` column.
+The dataset csv can be named anything, but it has to be the only one csv file under the <dataset_name>/ directory (grabbed by `glob('*.csv')[0]` by `app.py`)
+
