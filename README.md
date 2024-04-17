@@ -5,14 +5,6 @@
 
 - The latest front end (https://observablehq.com/@tiga1231/dim-bridge) expect images of data points stored in a `image_url` column in the data file (csv), e.g., http://host:port/path/to/image.png
 
-## Supported data format
-
-### CSV file
-TODO
-
-## Using DimBridge with Docker
-TODO
-
 ## Getting started
 
 1. Clone this repo:
@@ -26,7 +18,7 @@ TODO
 ~~```unzip dimbridge-dataset.zip```~~
 ~~A new dataset/ directory will show up~~
 
-1.Download dataset from Box, unzip it, and place the images folder to the dataset/animals5/images:
+1. Download images of animal5 dataset from Box, unzip it, and place the images folder to the dataset/animals5/images:
 https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh
 
 1. Use your favorite virtualenv*, install python dependencies:
@@ -53,4 +45,13 @@ https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh
 1. If this predicate server is not localhost...
     1. If the remote server machine does not have a public ip but you have ssh access, you can forward port 9001 of the remote server to the same port on the local machine that you run obserable notebook on:
 ```ssh -L 9001:localhost:9001 <username>@<your-machine-domain-or-ip>```
+
+
+## Using DimBridge with Docker
+TODO
+
+
+## Supported data format
+### CSV file
+TODO
 
