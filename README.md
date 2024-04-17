@@ -1,4 +1,16 @@
-# Get started
+## Breaking Changes
+
+- The latest front end (https://observablehq.com/@tiga1231/dim-bridge) expect images of data points stored in a `image_url` column in the data file (csv), e.g., http://host:port/path/to/image.png
+
+## Supported data format
+
+### CSV file
+TODO
+
+## Using DimBridge with Docker
+TODO
+
+## Getting started
 
 1. Clone this repo:
 ```git clone git@github.com:tiga1231/dim-bridge.git```
@@ -7,6 +19,7 @@
 
 1. Download dataset from Box as a zip file to the root of this repo:
 https://vanderbilt.box.com/s/kkhbiql67pc4n2wqp11o2wpxy1aim7a0
+TODO update demo datasets
 
 1. Unzip: 
 ```unzip dimbridge-dataset.zip```
@@ -20,6 +33,9 @@ A new dataset/ directory will show up
 ```python app.py```
 
 1. Open the DimBridge observable notebook:
+WebGL version:
+https://observablehq.com/@tiga1231/dim-bridge
+
 Original version:
 https://observablehq.com/d/bc84ced61d90006e
 
