@@ -6,3 +6,6 @@ static/
 venv/
 
 _old_datasets/
+
+*.csv
+*.npy
