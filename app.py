@@ -466,7 +466,17 @@ def get_predicate():
 # x0 = df.to_numpy()
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog='python app.py',
+        description='Flask app of DimBridge',
+        epilog='---------------------------',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument('-p', '--port', default=9001, help='App running port')
+
+    args = parser.parse_args()
+    print('Running App under arguments: ', args)
     # parser.add_argument(
     #     '--embedding_fn',
     #     required=True,
@@ -474,5 +484,6 @@ if __name__ == "__main__":
     # opt = parser.parse_args()
     # print(opt)
     # embedding = np.load(opt.embedding_fn)
+    port = args.port
 
-    app.run(host="0.0.0.0", port=9001, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=False)
