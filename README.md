@@ -36,11 +36,8 @@ https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh
     - Original version:
     https://observablehq.com/d/bc84ced61d90006e
 
-    - Jen's version:
-    https://observablehq.com/d/5c05aecd48c4eed5
-
-    - Jen's backup version
-    https://observablehq.com/d/1e642c90d6c45083
+    - Jen and Vanessa's version accounting for Scaled Data:
+    https://observablehq.com/@jrogerthat/dim_jen_version
 
 1. If this predicate server is not localhost...
     1. If the remote server machine does not have a public ip but you have ssh access, you can forward port 9001 of the remote server to the same port on the local machine that you run obserable notebook on:
