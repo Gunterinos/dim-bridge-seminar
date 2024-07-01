@@ -474,16 +474,16 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('-p', '--port', default=9001, help='App running port')
+    parser.add_argument('--debug', default=False, help='Turn on Flask debug mode')
 
     args = parser.parse_args()
     print('Running App under arguments: ', args)
     # parser.add_argument(
     #     '--embedding_fn',
     #     required=True,
-    #     help='embedding file')
+    #     help='embedding file name')
     # opt = parser.parse_args()
     # print(opt)
     # embedding = np.load(opt.embedding_fn)
-    port = args.port
 
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=args.port, debug=args.debug)
