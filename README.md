@@ -18,8 +18,11 @@
 ~~```unzip dimbridge-dataset.zip```~~
 ~~A new dataset/ directory will show up~~
 
-1. Download images of animal5 dataset from Box, unzip it, and place the images folder to the dataset/animals5/images:
-https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh
+~~1. Download images of animal5 dataset from Box, unzip it, and place the images folder to the dataset/animals5/images:~~
+~~https://vanderbilt.app.box.com/s/jmmdgqsiqlyeacfv7453v1hu6ql2brrh ~~
+1. Download images of animals https://drive.google.com/drive/folders/1x1Ptvpoay4YsM6IrtuDr11iYtkrv8nzI
+unzip, and copy it to dataset/
+
 
 1. Use your favorite virtualenv*, install python dependencies:
     (note from Jen: I use `python3 -m venv venv` and `source venv/bin/activate`)
