@@ -1,7 +1,7 @@
 # DimBridge
 
-## 
-New: see a jupyter notebook version of this work [[here]](https://github.com/tiga1231/dimbridge-jupyter)
+## New Jupyter Lab Widget
+See a Jupyter Lab version of this work [[here]](https://github.com/tiga1231/dimbridge-jupyter)
 
 ## Breaking Changes
 
