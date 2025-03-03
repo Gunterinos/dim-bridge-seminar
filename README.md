@@ -1,5 +1,7 @@
 # DimBridge
 
+## 
+New: see a jupyter notebook version of this work [[here]](https://github.com/tiga1231/dimbridge-jupyter)
 
 ## Breaking Changes
 
